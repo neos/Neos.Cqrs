@@ -22,6 +22,11 @@ use Neos\EventSourcing\Event\DomainEventInterface;
 final class EventEnvelope
 {
     /**
+     * @var \Closure<DomainEventInterface>
+     */
+    private $eventGenerator;
+
+    /**
      * @var DomainEventInterface
      */
     private $event;
@@ -31,9 +36,9 @@ final class EventEnvelope
      */
     private $rawEvent;
 
-    public function __construct(DomainEventInterface $event, RawEvent $rawEvent)
+    public function __construct(\Closure $eventGenerator, RawEvent $rawEvent)
     {
-        $this->event = $event;
+        $this->eventGenerator = $eventGenerator;
         $this->rawEvent = $rawEvent;
     }
 
@@ -44,6 +49,9 @@ final class EventEnvelope
      */
     public function getDomainEvent(): DomainEventInterface
     {
+        if (!$this->event) {
+            $this->event = call_user_func($this->eventGenerator);
+        }
         return $this->event;
     }
 

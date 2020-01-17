@@ -13,6 +13,7 @@ namespace Neos\EventSourcing\EventListener;
  */
 
 use Doctrine\ORM\EntityManagerInterface;
+use Neos\EventSourcing\Event\EventTypeResolver;
 use Neos\EventSourcing\EventListener\AppliedEventsStorage\AppliedEventsStorageInterface;
 use Neos\EventSourcing\EventListener\AppliedEventsStorage\DoctrineAppliedEventsStorage;
 use Neos\EventSourcing\EventListener\Exception\EventCouldNotBeAppliedException;
@@ -40,6 +41,12 @@ final class EventListenerInvoker
      * @var EntityManagerInterface
      */
     protected $entityManager;
+
+    /**
+     * @Flow\Inject
+     * @var EventTypeResolver
+     */
+    protected $eventTypeResolver;
 
     /**
      * @Flow\InjectConfiguration(path="EventListener.listeners")
@@ -102,12 +109,12 @@ final class EventListenerInvoker
      */
     private function applyEvent(EventListenerInterface $listener, EventEnvelope $eventEnvelope): void
     {
-        $event = $eventEnvelope->getDomainEvent();
         $rawEvent = $eventEnvelope->getRawEvent();
         try {
-            $listenerMethodName = 'when' . (new \ReflectionClass($event))->getShortName();
+            $eventClassName = $this->eventTypeResolver->getEventClassNameByType($rawEvent->getType());
+            $listenerMethodName = 'when' . (new \ReflectionClass($eventClassName))->getShortName();
         } catch (\ReflectionException $exception) {
-            throw new \RuntimeException(sprintf('Could not extract listener method name for listener %s and event %s', get_class($listener), get_class($event)), 1541003718, $exception);
+            throw new \RuntimeException(sprintf('Could not extract listener method name for listener %s and event %s', get_class($listener), $eventClassName), 1541003718, $exception);
         }
         if (!method_exists($listener, $listenerMethodName)) {
             return;
@@ -116,7 +123,7 @@ final class EventListenerInvoker
             $listener->beforeInvoke($eventEnvelope);
         }
         try {
-            $listener->$listenerMethodName($event, $rawEvent);
+            $listener->$listenerMethodName($eventEnvelope->getDomainEvent(), $rawEvent);
         } catch (\Throwable $exception) {
             throw new EventCouldNotBeAppliedException(sprintf('Event "%s" (%s) could not be applied to %s. Sequence number (%d) is not updated', $rawEvent->getIdentifier(), $rawEvent->getType(), get_class($listener), $rawEvent->getSequenceNumber()), 1544207001, $exception, $eventEnvelope, $listener);
         }

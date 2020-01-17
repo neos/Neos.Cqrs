@@ -59,7 +59,9 @@ final class EventStream implements \Iterator
         /** @var RawEvent $rawEvent */
         $rawEvent = $this->streamIterator->current();
         return new EventEnvelope(
-            $this->eventNormalizer->denormalize($rawEvent->getPayload(), $rawEvent->getType()),
+            function () use ($rawEvent) {
+                return $this->eventNormalizer->denormalize($rawEvent->getPayload(), $rawEvent->getType());
+            },
             $rawEvent
         );
     }
