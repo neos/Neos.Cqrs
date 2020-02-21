@@ -112,16 +112,16 @@ final class EventListenerInvoker
         } catch (\ReflectionException $exception) {
             throw new \RuntimeException(sprintf('Could not extract listener method name for listener %s and event %s', get_class($listener), get_class($event)), 1541003718, $exception);
         }
-        if (!method_exists($listener, $listenerMethodName)) {
-            return;
-        }
         if ($listener instanceof BeforeInvokeInterface) {
             $listener->beforeInvoke($eventEnvelope);
         }
-        try {
-            $listener->$listenerMethodName($event, $rawEvent);
-        } catch (\Throwable $exception) {
-            throw new EventCouldNotBeAppliedException(sprintf('Event "%s" (%s) could not be applied to %s. Sequence number (%d) is not updated', $rawEvent->getIdentifier(), $rawEvent->getType(), get_class($listener), $rawEvent->getSequenceNumber()), 1544207001, $exception, $eventEnvelope, $listener);
+        if (method_exists($listener, $listenerMethodName)) {
+            try {
+                $listener->$listenerMethodName($event, $rawEvent);
+            } catch (\Throwable $exception) {
+                throw new EventCouldNotBeAppliedException(sprintf('Event "%s" (%s) could not be applied to %s. Sequence number (%d) is not updated', $rawEvent->getIdentifier(), $rawEvent->getType(), get_class($listener),
+                    $rawEvent->getSequenceNumber()), 1544207001, $exception, $eventEnvelope, $listener);
+            }
         }
         if ($listener instanceof AfterInvokeInterface) {
             $listener->afterInvoke($eventEnvelope);

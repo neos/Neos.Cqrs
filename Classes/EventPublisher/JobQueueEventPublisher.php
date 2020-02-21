@@ -15,6 +15,7 @@ namespace Neos\EventSourcing\EventPublisher;
 use Flowpack\JobQueue\Common\Job\JobManager;
 use Neos\EventSourcing\Event\DecoratedEvent;
 use Neos\EventSourcing\Event\DomainEvents;
+use Neos\EventSourcing\EventListener\CatchAllEventListenerInterface;
 use Neos\EventSourcing\EventListener\Mapping\EventToListenerMappings;
 use Neos\EventSourcing\EventPublisher\JobQueue\CatchUpEventListenerJob;
 use Neos\Flow\Annotations as Flow;
@@ -89,7 +90,7 @@ final class JobQueueEventPublisher implements EventPublisherInterface
                 continue;
             }
             foreach ($this->mappings as $mapping) {
-                if ($mapping->getEventClassName() !== $eventClassName) {
+                if (!$mapping->matchesEventClassName($eventClassName)) {
                     continue;
                 }
                 // only process every Event Listener once

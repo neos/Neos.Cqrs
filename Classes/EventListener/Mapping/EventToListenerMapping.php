@@ -24,7 +24,7 @@ final class EventToListenerMapping implements \JsonSerializable
     /**
      * @var string
      */
-    private $eventClassName;
+    private $eventClassNamePattern;
 
     /**
      * @var string
@@ -36,21 +36,27 @@ final class EventToListenerMapping implements \JsonSerializable
      */
     private $options;
 
-    private function __construct(string $eventClassName, string $listenerClassName, array $options)
+    private function __construct(string $eventClassNamePattern, string $listenerClassName, array $options)
     {
-        $this->eventClassName = $eventClassName;
+        $this->eventClassNamePattern = $eventClassNamePattern;
         $this->listenerClassName = $listenerClassName;
         $this->options = $options;
     }
 
-    public static function create(string $eventClassName, string $listenerClassName, array $options): self
+    public static function create(string $eventClassNamePattern, string $listenerClassName, array $options): self
     {
-        return new static($eventClassName, $listenerClassName, $options);
+        return new static($eventClassNamePattern, $listenerClassName, $options);
     }
 
-    public function getEventClassName(): string
+    public function getEventClassNamePattern(): string
     {
-        return $this->eventClassName;
+        return $this->eventClassNamePattern;
+    }
+
+    public function matchesEventClassName(string $eventClassName): bool
+    {
+        $pattern = '/^' . str_replace('\\', '\\\\', $this->eventClassNamePattern) . '$/';
+        return preg_match($pattern, $eventClassName) === 1;
     }
 
     public function getListenerClassName(): string
@@ -74,7 +80,7 @@ final class EventToListenerMapping implements \JsonSerializable
     public function jsonSerialize()
     {
         return [
-            'eventClassName' => $this->eventClassName,
+            'eventClassNamePattern' => $this->eventClassNamePattern,
             'listenerClassName' => $this->listenerClassName,
             'options' => $this->options,
         ];

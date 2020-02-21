@@ -13,6 +13,7 @@ namespace Neos\EventSourcing\EventListener\Mapping;
  */
 
 use Neos\EventSourcing\Event\DomainEventInterface;
+use Neos\EventSourcing\EventListener\CatchAllEventListenerInterface;
 use Neos\EventSourcing\EventListener\EventListenerInterface;
 use Neos\EventSourcing\EventListener\Exception\InvalidConfigurationException;
 use Neos\EventSourcing\EventListener\Exception\InvalidEventListenerException;
@@ -131,6 +132,10 @@ class DefaultEventToListenerMappingProvider
                     foreach ($events as $eventClassName => $handlerMethodName) {
                         $mappings[$eventStoreIdentifier][] = compact('eventClassName', 'listenerClassName', 'presetId');
                     }
+                    if (is_subclass_of($listenerClassName, CatchAllEventListenerInterface::class)) {
+                        $eventClassName = '.*';
+                        $mappings[$eventStoreIdentifier][] = compact('eventClassName', 'listenerClassName', 'presetId');
+                    }
                 }
                 if (!$presetMatchesAnyListeners) {
                     throw new InvalidConfigurationException(sprintf('The pattern "%s" for Event Store "%s" does not match any listeners. Please adjust the pattern or remove it', $pattern, $eventStoreIdentifier), 1577533005);
@@ -211,8 +216,10 @@ class DefaultEventToListenerMappingProvider
                 $listenersFoundInClass = true;
             }
             if (!$listenersFoundInClass) {
-                throw new InvalidEventListenerException(sprintf('No listener methods have been detected in listener class %s. A listener has the signature "public function when<EventClass>(<EventClass> $event) {}" and every EventListener class has to implement at least one listener!',
-                    $listenerClassName), 1498123537);
+                if (!is_subclass_of($listenerClassName, CatchAllEventListenerInterface::class)) {
+                    throw new InvalidEventListenerException(sprintf('No listener methods have been detected in listener class %s. A listener has the signature "public function when<EventClass>(<EventClass> $event) {}" and every EventListener class has to implement at least one listener or implement the %s interface!', $listenerClassName, CatchAllEventListenerInterface::class), 1498123537);
+                }
+                $listeners[$listenerClassName] = [];
             }
         }
 
