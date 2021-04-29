@@ -119,10 +119,10 @@ class DoctrineEventStorage implements EventStorageInterface
             throw new \InvalidArgumentException(sprintf('Can\'t commit to virtual stream "%s"', $streamName), 1540632984);
         }
 
-        # Exponential backoff: initial interval = 5ms and 8 retry attempts = max 1275ms (= 1,275 seconds)
-        # @see http://backoffcalculator.com/?attempts=8&rate=2&interval=5
+        # Exponential backoff: initial interval = 5ms and 25 retry attempts = max 2360ms (= 2,36 seconds)
+        # @see http://backoffcalculator.com/?attempts=25&interval=0.005&rate=1.2
         $retryWaitInterval = 0.005;
-        $maxRetryAttempts = 8;
+        $maxRetryAttempts = 25;
         $retryAttempt = 0;
         while (true) {
             $this->reconnectDatabaseConnection();
@@ -144,7 +144,7 @@ class DoctrineEventStorage implements EventStorageInterface
                 }
                 usleep((int)($retryWaitInterval * 1E6));
                 $retryAttempt++;
-                $retryWaitInterval *= 2;
+                $retryWaitInterval *= 1.2;
                 $this->connection->rollBack();
                 continue;
             } catch (DBALException | ConcurrencyException $exception) {
