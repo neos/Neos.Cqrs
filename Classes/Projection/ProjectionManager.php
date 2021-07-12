@@ -172,6 +172,42 @@ class ProjectionManager
     }
 
     /**
+     * Create a snapshot of the specified projection at the current state
+     *
+     * @param string $projectionIdentifier
+     * @return Snapshot The snapshot
+     */
+    public function createSnapshot(string $projectionIdentifier): Snapshot
+    {
+        $projection = $this->getProjection($projectionIdentifier);
+        $projector = $this->objectManager->get($projection->getProjectorClassName());
+        if (!$projector instanceof SnapshotAwareProjectorInterface) {
+            throw new \InvalidArgumentException(sprintf('Failed creating snapshot for projection %s because its projector does not support snapshots', $projectionIdentifier), 1597951959);
+        }
+        $snapshotIdentifier = SnapshotIdentifier::fromRandom();
+        $eventSequenceNumber = $projector->createSnapshot($snapshotIdentifier);
+        return new Snapshot($snapshotIdentifier, $projectionIdentifier, $eventSequenceNumber, new \DateTimeImmutable());
+    }
+
+    /**
+     * Restore the specified snapshot
+     *
+     * @param SnapshotIdentifier $snapshotIdentifier
+     * @return void
+     */
+    public function restoreSnapshot(SnapshotIdentifier $snapshotIdentifier): void
+    {
+        $snapshot = new Snapshot($snapshotIdentifier, 'neos.contentgraph.doctrinedbaladapter:graph', 50, new \DateTimeImmutable());
+
+        $projection = $this->getProjection($snapshot->getProjectionIdentifier());
+        $projector = $this->objectManager->get($projection->getProjectorClassName());
+        if (!$projector instanceof SnapshotAwareProjectorInterface) {
+            throw new \InvalidArgumentException(sprintf('Failed restoring snapshot for projection %s because its projector does not support snapshots', $snapshot->getProjectionIdentifier()), 1598004220);
+        }
+        $projector->restoreSnapshot($snapshot);
+    }
+
+    /**
      * @param string $projectionIdentifier
      * @return EventListenerInvoker
      */

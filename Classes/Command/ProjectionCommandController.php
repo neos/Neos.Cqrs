@@ -15,6 +15,8 @@ namespace Neos\EventSourcing\Command;
 use Neos\EventSourcing\EventListener\Exception\EventCouldNotBeAppliedException;
 use Neos\EventSourcing\Projection\Projection;
 use Neos\EventSourcing\Projection\ProjectionManager;
+use Neos\EventSourcing\Projection\Snapshot;
+use Neos\EventSourcing\Projection\SnapshotIdentifier;
 use Neos\Flow\Annotations as Flow;
 use Neos\Flow\Cli\CommandController;
 use Neos\Flow\Cli\Exception\StopCommandException;
@@ -69,8 +71,8 @@ class ProjectionCommandController extends CommandController
      *
      * @param string $projection The projection identifier; see projection:list for possible options
      * @return void
-     * @see neos.eventsourcing:projection:list
      * @throws StopCommandException
+     * @see neos.eventsourcing:projection:list
      */
     public function describeCommand(string $projection): void
     {
@@ -268,6 +270,51 @@ class ProjectionCommandController extends CommandController
         if (!$quiet) {
             $this->outputLine('Applied %d events.', [$eventsCount]);
         }
+    }
+
+    /**
+     * Create a snapshot
+     *
+     * @param string $projection
+     * @param bool $quiet
+     * @throws
+     */
+    public function createSnapshotCommand(string $projection, $quiet = false): void
+    {
+        $projectionDto = $this->resolveProjectionOrQuit($projection);
+
+        if (!$quiet) {
+            $this->outputLine('Creating snapshot ...', [$projectionDto->getIdentifier()]);
+        }
+
+        $snapshot = $this->projectionManager->createSnapshot($projectionDto->getIdentifier());
+
+        if (!$quiet) {
+            $this->output->outputTable([
+                ['Snapshot Identifier', $snapshot->getSnapshotIdentifier()],
+                ['Projection Identifier', $snapshot->getProjectionIdentifier()],
+                ['Event Sequence Number', $snapshot->getEventSequenceNumber()],
+                ['Created At', $snapshot->getCreatedAt()->format('d.m.Y h:i:s')]
+            ]);
+        }
+    }
+
+    /**
+     * Restore a snapshot
+     *
+     * @param SnapshotIdentifier $snapshot
+     * @param bool $quiet
+     * @throws
+     */
+    public function restoreSnapshotCommand(SnapshotIdentifier $snapshot, $quiet = false): void
+    {
+        $snapshotDto = new Snapshot($snapshot, 'neos.eventsourcedcontentrepository:contentstream', 30, new \DateTimeImmutable());
+
+        if (!$quiet) {
+            $this->outputLine('Restoring snapshot for projection %s at event sequence number %s ...', [$snapshotDto->getSnapshotIdentifier(), $snapshotDto->getProjectionIdentifier(), $snapshotDto->getEventSequenceNumber()]);
+        }
+
+        $this->projectionManager->restoreSnapshot($snapshotDto->getSnapshotIdentifier());
     }
 
     /**
